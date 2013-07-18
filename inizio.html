@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Garmin CP TEST</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- GARMIN COMMUNICATOR PLUGIN API -->
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/prototype/prototype.js"></script>
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/garmin/util/Util-Broadcaster.js"></script>
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/garmin/util/Util-BrowserDetect.js"></script>
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/garmin/util/Util-DateTimeFormat.js"></script>
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/garmin/util/Util-PluginDetect.js"></script>
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/garmin/util/Util-XmlConverter.js"></script>
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/garmin/device/GarminObjectGenerator.js"></script>
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/garmin/device/GarminPluginUtils.js"></script>
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/garmin/device/GarminDevice.js"></script>
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/garmin/device/GarminDevicePlugin.js"></script>
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/garmin/device/GarminDeviceControl.js"></script>
+    <script type="text/javascript" src="http://developer.garmin.com/web/communicator-api/garmin/device/GarminDeviceDisplay.js"></script>
+
+    <script type="text/javascript">
+
+    var control;
+    var listener = Class.create();
+
+    // CREATE THE OBJECT WHICH CONTAINS ALL MY DEVICES DATA
+    var myDevices = {};
+
+    listener.prototype = {
+          initialize: function() { },
+          onFinishFindDevices: function(json) {
+              var devices = json.controller.getDevices();
+              var devicesFound = devices.length;
+
+              if (devicesFound > 0) {
+
+                  // FOR EVERY DEVICE FOUND...
+                  for( var i=0; i < devices.length; i++ ) {
+
+                      // CREATE THE OPTIONS IN THE SELECT WITH THE DEVICE NAME
+                      var opt = document.createElement('option');
+                      opt.text = devices[i].getDescription();
+                      opt.value = devices[i].getNumber();
+                      document.getElementById('allTheDevices').options.add(opt);
+
+                      // FILL THE OBJECT WITH THE DEVICE DATA
+                      myDevices[i] = {
+                          deviceName: devices[i].getDisplayName(),
+                          deviceId: devices[i].getId(),
+                          devicePartNumber: devices[i].getPartNumber(),
+                          deviceDescription: devices[i].getDescription(),
+                          deviceSwVersion: devices[i].getSoftwareVersion()
+                      };
+
+                      var test = control.getCurrentDeviceXml();
+                      document.getElementById('testp').innerHTML += "<p>"+test+"</p>";
+
+                  }
+
+                  // ADD THE VALUE AT THE HIDDEN FIELDS WITH THE FIRST DEVICE FOUND
+                  document.getElementById('myName').value = myDevices[0].deviceName;
+                  document.getElementById('myId').value = myDevices[0].deviceId;
+                  document.getElementById('myPartNumber').value = myDevices[0].devicePartNumber;
+                  document.getElementById('myDescription').value = myDevices[0].deviceDescription;
+                  document.getElementById('mySwVersion').value = myDevices[0].deviceSwVersion;
+                  document.getElementById('notification').innerHTML += "<div class=\"alert alert-success\">Have been found "+devices.length+" devices.</div>";
+                  document.getElementById('select-form').style.display = 'block';
+
+              } else {
+
+                  document.getElementById('notification').innerHTML += "<div class=\"alert alert-danger\">No devices found...</div>";
+              }
+          }    
+      }
+
+
+      function fillHiddenFields(select) {
+          var selectedOption = select.options[select.selectedIndex];
+          document.getElementById('myName').value = this.myDevices[selectedOption.value].deviceName;
+          document.getElementById('myId').value = this.myDevices[selectedOption.value].deviceId;
+          document.getElementById('myPartNumber').value = this.myDevices[selectedOption.value].devicePartNumber;
+          document.getElementById('myDescription').value = this.myDevices[selectedOption.value].deviceDescription;
+          document.getElementById('mySwVersion').value = this.myDevices[selectedOption.value].deviceSwVersion;
+      }
+
+
+      function load() {
+          document.getElementById('select-form').style.display = 'none';
+          try {
+              control = new Garmin.DeviceControl();
+              control.register(new listener());
+              var unlocked = control.unlock( ["http://www.giuseppegarbin.com/GCP/","05aaf71de313c1f9d0e49066160df28a"] );
+              document.getElementById('notification').innerHTML += "<div class=\"alert alert-success\"><strong>First Step... Completed!</strong> - You have already installed the Garmin Connucator Plugin on your browser.</div>";
+
+              try {
+                  control.findDevices();
+              } catch(e) { alert(e); }
+
+      } catch(e) { 
+              //alert(e);
+              document.getElementById('notification').innerHTML += "<div class=\"alert alert-danger\"><strong>Attention!</strong> - You must install the Garmin Communicator Plugin before to begin. <a href=\"http://software.garmin.com/it-IT/gcp.html\">Click here</a></div>";
+          }
+      }
+
+
+      function startRead(){
+
+          startReadGpsFromFirstDevice();
+          var readData =  finishReadAndGetData();
+          document.getElementById("testp").innerHTML = "<p>"+readData+"</p>";   
+
+      }
+
+    </script>
+
+
+
+
+    <!-- CSS: BOOTSTRAP -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <link href="css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <link href="css/style-responsive.css" rel="stylesheet">
+    <!-- CSS: FONT AWESOME -->
+    <link href="css/font-awesome/font-awesome.min.css" rel="stylesheet">
+    <link href="css/font-awesome/font-awesome-ie7.min.css" rel="stylesheet">
+
+</head>
+
+<body onLoad="load()">
+
+
+
+    <!-- Part 1: Wrap all page content here -->
+    <div id="wrap">
+
+      <!-- Begin page content -->
+      <div class="container">
+        <div class="page-header">
+          <h1>Get data from Garmin device</h1>
+          <h4>Step 1/2</h4>
+        </div>
+        <p class="lead">This application automatically detect if the Communicato Plugin is correctly installed on the browser, if there are Garmin devices connected and it automatically exctract some basic information from the device.</p>
+        <div class="row">
+          <div class="span4">
+            <div id="notification"></div>
+            <form action="fine.php" method="post" id="select-form">
+              <select id="allTheDevices" onchange="fillHiddenFields(this)" class="input-block-level"></select>
+              <input type="hidden" id="myName" name="myName" value="" />
+              <input type="hidden" id="myId" name="myId" value="" />
+              <input type="hidden" id="myPartNumber" name="myPartNumber" value="" />
+              <input type="hidden" id="myDescription" name="myDescription" value="" />
+              <input type="hidden" id="mySwVersion" name="mySwVersion" value="" />
+              <p><button type="submit" class="btn btn-primary">Send device data!</button></p>
+            </form>
+          </div>
+          <div class="span8" id="testp"></div>
+
+        </div><!-- /raw -->       
+      </div><!-- /container -->
+
+      
+    </div><!-- /wrap -->
+
+      <div id="push"></div>
+    </div>
+
+    <div id="footer">
+      <div class="container">
+        <p class="muted credit">Curtesy of <a href="http://www.giuseppegarbin.com">Giuseppe Garbin</a>.</p>
+      </div>
+    </div>
+
+  </body>
+</html>
